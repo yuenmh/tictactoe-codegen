@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mkdir -p out
+clang -O3 -Wall -Wextra -Werror -Wpedantic -o out/main main.c
+./out/main
