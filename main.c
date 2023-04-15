@@ -352,8 +352,114 @@ void run_game(void) {
     }
 }
 
+void generate_board_print(Board *board) {
+    for (int r = 0; r < BOARD_SIZE; r++) {
+        printf("printf(\"");
+        for (int c = 0; c < BOARD_SIZE; c++) {
+            Sym sym = board_get_sym(board, r, c);
+            if (sym == SYM_SELF) {
+                printf(" X ");
+            } else if (sym == SYM_OPP) {
+                printf(" O ");
+            } else {
+                printf(" - ");
+            }
+        }
+        printf("\\n\");\n");
+    }
+}
+
+void generate_turn(Board *board, Sym auto_player) {
+    Sym user_player = sym_invert(auto_player);
+    // Outer loop for the user input because some of the moves don't lead to
+    // the next state
+    printf("while (1) {\n");
+    printf("input = get_input();\n");
+    bool is_first_iter = true;
+    for (int r = 0; r < BOARD_SIZE; r++) {
+        for (int c = 0; c < BOARD_SIZE; c++) {
+            // Turn it into else if, if it's not the first iteration
+            if (!is_first_iter) {
+                printf("else ");
+            }
+            printf("if (input.r == %d && input.c == %d) {\n", r, c);
+            is_first_iter = false;
+            if (!board_move_is_possible(board, r, c)) {
+                printf("    printf(\"Move is not possible\\n\");\n");
+                printf("    continue;\n");
+            } else {
+                // Print the user's board
+                Board user_move_board = board_set_sym(board, r, c, user_player);
+                generate_board_print(&user_move_board);
+                // There is only one best move per possible user move
+                Move my_move =
+                    get_best_move(&user_move_board, auto_player, auto_player);
+                printf("    printf(\"Computer's move: %d,%d\\n\");\n",
+                       my_move.r, my_move.c);
+                // Print the computer's board
+                Board my_move_board = board_set_sym(&user_move_board, my_move.r,
+                                                    my_move.c, auto_player);
+                generate_board_print(&my_move_board);
+                // Check if the game is over
+                Sym winner = board_get_winner_or_tie(&my_move_board);
+                if (winner == SYM_INVALID) {
+                    printf("    printf(\"Tie!\\n\");\n");
+                } else if (winner == SYM_SELF) {
+                    printf("    printf(\"You lose!\\n\");\n");
+                } else if (winner == SYM_OPP) {
+                    printf("    printf(\"You win!\\n\");\n");
+                } else {
+                    // Continue recursing
+                    generate_turn(&my_move_board, auto_player);
+                }
+                printf("    break;\n");
+            }
+            printf("}\n");
+        }
+    }
+    // The default case
+    printf("else {\n");
+    printf("    printf(\"Move is not possible\\n\");\n");
+    printf("    continue;\n");
+    printf("}\n");
+    // closing brace for the while loop
+    printf("}\n");
+}
+
+void generate_code(void) {
+    char *code = "#include <stdio.h>\n"
+                 "\n"
+                 "typedef struct { int r, c; } Move;\n"
+                 "\n"
+                 "Move get_input(void) {\n"
+                 "    int r, c;\n"
+                 "    while (1) {\n"
+                 "        r = -1;\n"
+                 "        c = -1;\n"
+                 "        printf(\"Enter row,column: \");\n"
+                 // FIXME probably have to manually parse it
+                 "        scanf(\"%d,%d\", &r, &c);\n"
+                 "        if (r < 0 || c < 0 || r > 2 || c > 2) {\n"
+                 "            printf(\"Invalid move\\n\");\n"
+                 "            continue;\n"
+                 "        }\n"
+                 "        break;\n"
+                 "    }\n"
+                 "    return (Move){.r = r, .c = c};\n"
+                 "}\n"
+                 "\n"
+                 "int main(void) {\n"
+                 "    printf(\"You are O, the computer is X.\\n\");\n"
+                 "    Move input = (Move){.r = -1, .c = -1};\n";
+    printf("%s", code);
+    Board board = board_create();
+    generate_turn(&board, SYM_SELF);
+    printf("}\n");
+}
+
 int main(void) {
-    printf("You are O, the computer is X.\n");
-    run_game();
+    // printf("You are O, the computer is X.\n");
+    // run_game();
+    generate_code();
     return 0;
 }
